@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>THERMAL ANALYZER</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* --- INITIAL INTERACTION LAYER --- */
+        #interaction-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: #000a1a;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            z-index: 1000000;
+            cursor: pointer;
+        }
+        .touch-prompt {
+            color: #ffb703;
+            font-family: 'Segoe UI', sans-serif;
+            letter-spacing: 4px;
+            font-weight: bold;
+            text-transform: uppercase;
+            animation: pulse-text 2s infinite;
+        }
+        @keyframes pulse-text {
+            0%, 100% { opacity: 0.3; transform: scale(0.95); }
+            50% { opacity: 1; transform: scale(1); }
+        }
+
+        /* --- FUTURISTIC ENERGY CORE LOADER --- */
+        #thermal-loader {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: #000a1a;
+            display: none; /* Only shows after click */
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 99999;
+            overflow: hidden;
+            transition: opacity 1s ease-in-out;
+        }
+
+        .heat-particle {
+            position: absolute;
+            width: 3px; height: 3px;
+            background: #ffb703;
+            border-radius: 50%;
+            filter: blur(1px);
+            opacity: 0.6;
+            animation: rise 4s infinite linear;
+        }
+
+        @keyframes rise {
+            0% { transform: translateY(100vh) scale(1); opacity: 0; }
+            50% { opacity: 0.8; }
+            100% { transform: translateY(-20vh) scale(2); opacity: 0; }
+        }
+
+        .core-box {
+            position: relative;
+            width: 150px; height: 150px;
+            display: flex; justify-content: center; align-items: center;
+        }
+
+        .ring-outer {
+            position: absolute;
+            width: 100%; height: 100%;
+            border: 4px solid transparent;
+            border-top: 4px solid #d90429;
+            border-bottom: 4px solid #d90429;
+            border-radius: 50%;
+            animation: spin 1.5s linear infinite;
+        }
+
+        .ring-inner {
+            position: absolute;
+            width: 70%; height: 70%;
+            border: 4px solid transparent;
+            border-left: 4px solid #ffb703;
+            border-right: 4px solid #ffb703;
+            border-radius: 50%;
+            animation: spin-reverse 1s linear infinite;
+        }
+
+        .core-glow {
+            width: 40px; height: 40px;
+            background: #ffb703;
+            border-radius: 50%;
+            box-shadow: 0 0 40px #ffb703, 0 0 80px #d90429;
+            animation: pulse-core 1.5s ease-in-out infinite alternate;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes spin-reverse { to { transform: rotate(-360deg); } }
+        @keyframes pulse-core {
+            0% { transform: scale(0.8); opacity: 0.5; }
+            100% { transform: scale(1.2); opacity: 1; }
+        }
+
+        .load-text {
+            margin-top: 35px;
+            color: white;
+            font-family: 'Segoe UI', sans-serif;
+            font-weight: bold;
+            letter-spacing: 5px;
+            text-transform: uppercase;
+            text-shadow: 0 0 10px rgba(255, 183, 3, 0.5);
+        }
+
+        .dots::after {
+            content: '...';
+            animation: dot-anim 1.5s infinite;
+        }
+
+        @keyframes dot-anim {
+            0% { content: '.'; }
+            33% { content: '..'; }
+            66% { content: '...'; }
+        }
+
+        .fade-out { opacity: 0; pointer-events: none; }
+
+        /* --- MAIN UI STYLES --- */
+        :root { --navy: #002366; --red: #d90429; --gold: #ffb703; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; background-color: #f0f2f5; margin: 0; padding: 20px; }
+        .container { max-width: 950px; margin: auto; background: rgba(255, 255, 255, 0.95); border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); overflow: hidden; position: relative; }
+        header { background: var(--navy); color: white; text-align: center; padding: 25px; border-bottom: 5px solid var(--gold); }
+        .team-info { margin-top:10px; font-weight:bold; font-size:0.9rem; }
+        .gold-label { color: var(--gold); }
+        .input-section { padding: 30px; text-align: center; background: #fff8e1; margin: 20px; border-radius: 10px; border: 2px solid var(--gold); }
+        input { padding: 15px; font-size: 1.8rem; width: 130px; text-align: center; border: 3px solid var(--navy); border-radius: 8px; font-weight: bold; }
+        .verify-btn { background: var(--red); color: white; border: none; padding: 15px 40px; font-size: 1.1rem; font-weight: bold; cursor: pointer; border-radius: 5px; margin-top: 15px; text-transform: uppercase; }
+        .dashboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px; padding: 0 20px; }
+        .card { background: var(--navy); color: white; padding: 20px; border-radius: 10px; text-align: center; }
+        .card p { font-size: 1.8rem; margin: 10px 0 0; color: var(--gold); font-weight: bold; }
+        .white-paper { background: #fff; border: 1px solid #ccc; padding: 35px; margin: 25px; border-radius: 5px; border-left: 35px solid #eee; display: none; }
+        .step-box { background: #f9f9f9; border: 1px dashed #bbb; padding: 15px; margin-bottom: 15px; border-radius: 5px; text-align: left; line-height: 1.6; }
+        .formula { font-family: 'Courier New', Courier, monospace; font-weight: bold; color: #d90429; display: block; margin: 5px 0; background: #fff; padding: 5px; border-radius: 3px; }
+        .chart-box { padding: 20px; background: white; margin: 20px; border-radius: 10px; border: 1px solid #ddd; height: 450px; position: relative;}
+        .refresh-graph-btn { position: absolute; top: 10px; right: 10px; padding: 5px 10px; background: #eee; border: 1px solid #ccc; cursor: pointer; border-radius: 3px; font-size: 0.7rem; font-weight: bold; }
+        footer { text-align: center; padding: 30px; background: #f8f9fa; border-top: 5px solid var(--navy); }
+        .modal { display: none; position: fixed; z-index: 3000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); }
+        .modal-content { background-color: white; margin: 5% auto; padding: 30px; border-radius: 15px; width: 85%; max-width: 800px; box-shadow: 0 5px 30px rgba(0,0,0,0.3); overflow-y: auto; max-height: 85vh; }
+        .close-btn { float: right; font-size: 28px; font-weight: bold; cursor: pointer; color: var(--red); }
+        .nav-buttons { position: absolute; top: 20px; right: 20px; display: flex; gap: 10px; }
+        .nav-btn { padding: 10px 15px; border-radius: 5px; font-weight: bold; cursor: pointer; border: none; }
+        .help-trigger { background: var(--gold); color: var(--navy); }
+        .archive-trigger { background: #00a8cc; color: white; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9rem; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+        th { background: var(--navy); color: white; }
+    </style>
+</head>
+<body onload="autoCleanup(); initChart()">
+
+    <audio id="startupSound" src="https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3" preload="auto"></audio>
+
+    <div id="interaction-overlay" onclick="startThermalProcessing()">
+        <p class="touch-prompt">Tap to Initialize Thermal System</p>
+    </div>
+
+    <div id="thermal-loader">
+        <div class="heat-particle" style="left: 15%; animation-delay: 0s;"></div>
+        <div class="heat-particle" style="left: 45%; animation-delay: 1s;"></div>
+        <div class="heat-particle" style="left: 75%; animation-delay: 0.5s;"></div>
+        <div class="heat-particle" style="left: 90%; animation-delay: 1.5s;"></div>
+        
+        <div class="core-box">
+            <div class="ring-outer"></div>
+            <div class="ring-inner"></div>
+            <div class="core-glow"></div>
+        </div>
+        <div class="load-text">Thermal Processing<span class="dots"></span></div>
+    </div>
+
+    <div class="container" id="mainContainer">
+        <div class="nav-buttons">
+            <button class="nav-btn archive-trigger" onclick="toggleModal('archiveModal')">RESEARCH ARCHIVE</button>
+            <button class="nav-btn help-trigger" onclick="toggleModal('helpModal')">HELP CENTER</button>
+        </div>
+
+        <header>
+            <h1>THERMAL INDUCED RESONANT FREQUENCY ANALYZER</h1>
+            <div class="team-info">
+                <span class="gold-label">SUPERVISOR:</span> DR. SUBHANKAR CHAKRABORTY <br>
+                <span class="gold-label">TEAM MEMBERS:</span> R. BHAVANI PRASAD, S. ATCHUTHA RAO, D. HASWANTH KUMAR
+            </div>
+        </header>
+
+        <div class="input-section">
+            <label style="display:block; font-weight:bold; margin-bottom:10px;">ENTER OPERATING TEMPERATURE (°C):</label>
+            <input type="number" id="tempInput" placeholder="0">
+            <br>
+            <button class="verify-btn" onclick="calculateAndShow()">Verify & Calculate</button>
+        </div>
+
+        <div id="resultsArea" style="display:none;">
+            <div class="dashboard">
+                <div class="card"><h3>RESONANT FREQUENCY (f₀)</h3><p id="resFreq">0</p></div>
+                <div class="card" style="background:var(--red)"><h3>EFFICIENCY (ηPT)</h3><p id="effi">0</p></div>
+                <div class="card" style="background:#00509d"><h3>FREQUENCY SHIFT (|Δf₀|)</h3><p id="shift">0</p></div>
+            </div>
+
+            <div class="white-paper" id="paper">
+                <h2 style="text-align:center; color: var(--navy);">🔬 DETAILED CALCULATION STEPS</h2>
+                <div class="paper-content" id="detailedCalc"></div>
+            </div>
+
+            <div class="chart-box">
+                <button class="refresh-graph-btn" onclick="resetCurrentGraph()">RESET ANALYZER</button>
+                <canvas id="mainChart"></canvas>
+            </div>
+        </div>
+
+        <footer>
+            <div style="font-weight: 900; color: var(--navy);">RESEARCH ADVISORY & DEVELOPMENT TEAM</div>
+            <div style="font-size:0.8rem; margin-top:10px; font-weight:bold; color:#888;">© 2026 RESEARCH PROJECT | ALL RIGHTS RESERVED</div>
+        </footer>
+    </div>
+
+    <div id="helpModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="toggleModal('helpModal')">&times;</span>
+            <h2 style="color: var(--navy); border-bottom: 2px solid var(--gold);">HELP CENTER - PROJECT CONTACTS</h2>
+            <h3>SUPERVISOR</h3>
+            <p><strong>DR. SUBHANKAR CHAKRABORTY</strong><br><span style="color: var(--red);">subhankarchakraborty@veltech.edu.in</span></p>
+            <h3>TEAM MEMBERS</h3>
+            <p><strong>R. BHAVANI PRASAD</strong><br><span style="color: var(--red);">vtu23786@veltech.edu.in</span></p>
+            <p><strong>S. ATCHUTHA RAO</strong><br><span style="color: var(--red);">vtu23749@veltech.edu.in</span></p>
+            <p><strong>D. HASWANTH KUMAR</strong><br><span style="color: var(--red);">vtu23797@veltech.edu.in</span></p>
+        </div>
+    </div>
+
+    <div id="archiveModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="toggleModal('archiveModal')">&times;</span>
+            <h2 style="color: var(--navy); border-bottom: 2px solid var(--gold);">RESEARCH ARCHIVE (AUTO-CLEANUP 24H)</h2>
+            <div style="height: 300px; margin-bottom: 20px;">
+                <canvas id="archiveChart"></canvas>
+            </div>
+            <div id="archiveTableContainer"></div>
+            <button onclick="clearArchive()" style="margin-top:20px; padding:10px; background:var(--red); color:white; border:none; border-radius:5px; cursor:pointer;">MANUAL CLEAR ALL</button>
+        </div>
+    </div>
+
+<script>
+    // --- Startup Sound & Animation Trigger ---
+    function startThermalProcessing() {
+        // Play Sound
+        const audio = document.getElementById('startupSound');
+        audio.volume = 0.5; // Set a sweet volume level
+        audio.play();
+
+        // Hide prompt overlay
+        document.getElementById('interaction-overlay').style.display = 'none';
+
+        // Show Loader
+        const loader = document.getElementById('thermal-loader');
+        loader.style.display = 'flex';
+
+        // Timer to fade out loader
+        setTimeout(() => {
+            loader.classList.add('fade-out');
+            setTimeout(() => {
+                loader.style.display = 'none';
+            }, 1000);
+        }, 3500); 
+    }
+
+    let chart, archiveChart;
+    let historyTemps = [];
+    let historyEfficiencies = [];
+
+    function toggleModal(id) {
+        const m = document.getElementById(id);
+        m.style.display = (m.style.display === 'block') ? 'none' : 'block';
+        if(id === 'archiveModal') {
+            autoCleanup();
+            renderArchiveView();
+        }
+    }
+
+    function initChart() {
+        const ctx = document.getElementById('mainChart').getContext('2d');
+        chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: historyTemps,
+                datasets: [{
+                    label: 'Efficiency η (%) vs Temperature',
+                    data: historyEfficiencies,
+                    borderColor: '#d90429',
+                    backgroundColor: 'rgba(217, 4, 41, 0.1)',
+                    borderWidth: 3, fill: true, tension: 0.3, pointRadius: 6, pointBackgroundColor: '#ffb703'
+                }]
+            }
+        });
+    }
+
+    function autoCleanup() {
+        let archive = JSON.parse(localStorage.getItem('thermalArchive')) || [];
+        const now = Date.now();
+        const validArchive = archive.filter(item => (now - item.time) < 86400000);
+        localStorage.setItem('thermalArchive', JSON.stringify(validArchive));
+    }
+
+    function calculateAndShow() {
+        autoCleanup();
+        const T = parseFloat(document.getElementById('tempInput').value);
+        if (isNaN(T)) { alert("Please enter temperature!"); return; }
+
+        document.getElementById('resultsArea').style.display = 'block';
+        document.getElementById('paper').style.display = 'block';
+
+        const baseF = 459.37;
+        const ur_25 = 1815;
+        const ur_T = (0.008979 * Math.pow(T, 3)) - (0.9527 * Math.pow(T, 2)) + (33.51 * T) + 1815;
+        const L_T = 2e-6 * (ur_T / ur_25);
+        const p=0.03697, q=-3.505, r=144.6, s=-2441;
+        const itg = ((p/4)*Math.pow(T,4) + (q/3)*Math.pow(T,3) + (r/2)*Math.pow(T,2) + s*T) - ((p/4)*Math.pow(25,4) + (q/3)*Math.pow(25,3) + (r/2)*Math.pow(25,2) + s*25);
+        const C_T = 60e-9 * Math.exp(itg * 1e-6);
+        const f_new = (1 / (2 * Math.PI * Math.sqrt(L_T * C_T))) / 1000;
+        const f_shift = Math.abs(f_new - baseF);
+        const efficiency = (-0.000348 * T * T) + (0.0135 * T) + 91.29;
+
+        document.getElementById('resFreq').innerText = f_new.toFixed(2) + " kHz";
+        document.getElementById('effi').innerText = efficiency.toFixed(2) + " %";
+        document.getElementById('shift').innerText = f_shift.toFixed(2) + " kHz";
+
+        document.getElementById('detailedCalc').innerHTML = `
+            <div class="step-box">
+                <strong>STEP 1: Find Relative Permeability (μr) at ${T}°C</strong><br>
+                Using Polynomial Regression:
+                <span class="formula">μr = (0.0089 × ${T}³) - (0.952 × ${T}²) + (33.51 × ${T}) + 1815</span>
+                Result: μr = <b>${ur_T.toFixed(2)}</b>
+            </div>
+            <div class="step-box">
+                <strong>STEP 2: Calculate New Inductance (L) at ${T}°C</strong><br>
+                Substitution: L = L_initial × (μr_temp / μr_25)
+                <span class="formula">L = 2μH × (${ur_T.toFixed(2)} / 1815)</span>
+                Result: L = <b>${(L_T * 1e6).toFixed(4)} μH</b>
+            </div>
+            <div class="step-box">
+                <strong>STEP 3: Calculate Thermal-Induced Capacitance (C)</strong><br>
+                Substitution: Using Thermal Integral (∫) result: ${itg.toFixed(2)}
+                <span class="formula">C = 60nF × e^(${itg.toFixed(2)} × 10⁻⁶)</span>
+                Result: C = <b>${(C_T * 1e9).toFixed(2)} nF</b>
+            </div>
+            <div class="step-box">
+                <strong>STEP 4: Resonant Frequency Calculation (f₀)</strong><br>
+                Formula: f₀ = 1 / (2 × π × √(L × C))
+                <span class="formula">f₀ = 1 / (2 × 3.14 × √(${(L_T).toExponential(2)} × ${(C_T).toExponential(2)}))</span>
+                Result: f₀ = <b>${f_new.toFixed(2)} kHz</b>
+            </div>
+            <div class="step-box" style="border: 2px solid var(--navy); background: #e3f2fd;">
+                <strong>FINAL COMPARISON:</strong><br>
+                • Frequency at Standard Temp (25°C): <b>${baseF} kHz</b><br>
+                • Frequency at Operating Temp (${T}°C): <b>${f_new.toFixed(2)} kHz</b><br>
+                • Total Frequency Shift (|Δf₀|): <b>${f_shift.toFixed(2)} kHz</b><br>
+                • System Efficiency (ηPT): <b>${efficiency.toFixed(2)} %</b>
+            </div>
+        `;
+        
+        saveToArchive(T, f_new.toFixed(2), efficiency.toFixed(2));
+        updateChartData(T, efficiency.toFixed(2));
+    }
+
+    function updateChartData(newT, newEff) {
+        chart.data.labels.push(newT + "°C");
+        chart.data.datasets[0].data.push(newEff);
+        chart.update();
+    }
+
+    function resetCurrentGraph() {
+        chart.data.labels = [];
+        chart.data.datasets[0].data = [];
+        chart.update();
+        document.getElementById('resultsArea').style.display = 'none';
+        document.getElementById('tempInput').value = "";
+    }
+
+    function saveToArchive(temp, freq, eff) {
+        let archive = JSON.parse(localStorage.getItem('thermalArchive')) || [];
+        archive.push({ temp, freq, eff, time: Date.now() });
+        localStorage.setItem('thermalArchive', JSON.stringify(archive));
+    }
+
+    function renderArchiveView() {
+        const container = document.getElementById('archiveTableContainer');
+        const archive = JSON.parse(localStorage.getItem('thermalArchive')) || [];
+        
+        if(archive.length === 0) {
+            container.innerHTML = "<p>Archive is empty. Data auto-expires after 24 hours.</p>";
+            if(archiveChart) archiveChart.destroy();
+            return;
+        }
+
+        let html = "<table><tr><th>Temp</th><th>Freq (kHz)</th><th>Eff (%)</th><th>Time</th></tr>";
+        archive.forEach(item => {
+            html += `<tr><td>${item.temp}°C</td><td>${item.freq}</td><td>${item.eff}</td><td>${new Date(item.time).toLocaleTimeString()}</td></tr>`;
+        });
+        html += "</table>";
+        container.innerHTML = html;
+
+        const actx = document.getElementById('archiveChart').getContext('2d');
+        if(archiveChart) archiveChart.destroy();
+        archiveChart = new Chart(actx, {
+            type: 'line',
+            data: {
+                labels: archive.map(i => i.temp + "°C"),
+                datasets: [{
+                    label: 'Efficiency History (Last 24H)',
+                    data: archive.map(i => i.eff),
+                    borderColor: '#00a8cc',
+                    tension: 0.1, fill: false, pointRadius: 4
+                }]
+            }
+        });
+    }
+
+    function clearArchive() {
+        if(confirm("Delete all research data from local storage?")) {
+            localStorage.removeItem('thermalArchive');
+            renderArchiveView();
+        }
+    }
+</script>
+</body>
+</html>
